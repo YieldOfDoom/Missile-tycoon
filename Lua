@@ -1,114 +1,112 @@
--- Missile Tycoon PRECISE TARGET v11 - stat_Money + GameStat_Money
+-- FINAL MAX FORCE v12 | RAYFIELD VERSION
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player.PlayerGui
+-- RAYFIELD
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 520, 0, 580)
-frame.Position = UDim2.new(0.5, -260, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
-frame.Parent = screenGui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
+local Window = Rayfield:CreateWindow({
+    Name = "💀 FINAL MAX FORCE v12",
+    LoadingTitle = "FINAL MAX FORCE",
+    LoadingSubtitle = "Rayfield UI",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    Discord = {
+        Enabled = false,
+    },
+    KeySystem = false,
+})
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 70)
-title.BackgroundTransparency = 1
-title.Text = "💀 PRECISE MONEY TARGET v11"
-title.TextColor3 = Color3.fromRGB(255, 30, 30)
-title.TextScaled = true
-title.Font = Enum.Font.GothamBold
-title.Parent = frame
+-- TAB
+local MainTab = Window:CreateTab("Main", 4483362458)
 
-local amountBox = Instance.new("TextBox")
-amountBox.Size = UDim2.new(0.85, 0, 0, 60)
-amountBox.Position = UDim2.new(0.075, 0, 0.17, 0)
-amountBox.Text = "25000000"
-amountBox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-amountBox.TextColor3 = Color3.new(1,1,1)
-amountBox.TextScaled = true
-amountBox.Parent = frame
-Instance.new("UICorner", amountBox).CornerRadius = UDim.new(0, 12)
-
-local enableBtn = Instance.new("TextButton")
-enableBtn.Size = UDim2.new(0.85, 0, 0, 70)
-enableBtn.Position = UDim2.new(0.075, 0, 0.32, 0)
-enableBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-enableBtn.Text = "START PRECISE ATTACK"
-enableBtn.TextColor3 = Color3.new(1,1,1)
-enableBtn.TextScaled = true
-enableBtn.Font = Enum.Font.GothamBold
-enableBtn.Parent = frame
-Instance.new("UICorner", enableBtn).CornerRadius = UDim.new(0, 12)
-
-local stopBtn = Instance.new("TextButton")
-stopBtn.Size = UDim2.new(0.85, 0, 0, 55)
-stopBtn.Position = UDim2.new(0.075, 0, 0.5, 0)
-stopBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-stopBtn.Text = "STOP"
-stopBtn.TextColor3 = Color3.new(1,1,1)
-stopBtn.TextScaled = true
-stopBtn.Parent = frame
-Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 12)
-
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, 0, 0, 170)
-status.Position = UDim2.new(0, 0, 0.62, 0)
-status.BackgroundTransparency = 1
-status.Text = "Forcing: GameStat_Money + stat_Money + leaderstats"
-status.TextColor3 = Color3.fromRGB(255, 100, 100)
-status.TextScaled = true
-status.TextWrapped = true
-status.Parent = frame
-
-local targetAmount = 25000000
+-- VARIABLES
+local target = 25000000
 local enabled = false
 local conn = nil
 
-local function preciseForce(amount)
-    -- Leaderstats (leaderboard)
-    local ls = player:FindFirstChild("leaderstats")
-    if ls then
-        local m = ls:FindFirstChild("Money")
-        if m then m.Value = amount end
-    end
+-- INPUT
+MainTab:CreateInput({
+    Name = "Money Amount",
+    PlaceholderText = "25000000",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local amt = tonumber(Text)
+        if amt then
+            target = math.floor(amt)
+        end
+    end,
+})
 
-    -- Precise targets from your Dex
-    for _, v in pairs(player:GetDescendants()) do
-        if v.Name == "GameStat_Money" or v.Name == "stat_Money" then
-            if v:IsA("NumberValue") or v:IsA("IntValue") then
-                v.Value = amount
+-- ENABLE BUTTON
+MainTab:CreateButton({
+    Name = "ENABLE FINAL FORCE",
+    Callback = function()
+        enabled = true
+
+        if conn then
+            conn:Disconnect()
+        end
+
+        conn = RunService.Heartbeat:Connect(function()
+            if not enabled then
+                return
             end
+
+            -- leaderstats
+            local ls = player:FindFirstChild("leaderstats")
+
+            if ls and ls:FindFirstChild("Money") then
+                ls.Money.Value = target
+            end
+
+            -- all possible money values
+            for _, v in pairs(player:GetDescendants()) do
+                if v.Name == "GameStat_Money"
+                or v.Name == "stat_Money"
+                or v.Name == "Money" then
+
+                    if v:IsA("NumberValue") or v:IsA("IntValue") then
+                        v.Value = target
+                    end
+                end
+            end
+        end)
+
+        Rayfield:Notify({
+            Title = "FINAL FORCE ACTIVE",
+            Content = "Target → " .. tostring(target),
+            Duration = 5,
+            Image = 4483362458,
+        })
+    end,
+})
+
+-- STOP BUTTON
+MainTab:CreateButton({
+    Name = "STOP",
+    Callback = function()
+        enabled = false
+
+        if conn then
+            conn:Disconnect()
         end
-    end
 
-    -- Backup: Force ALL number values (for GUI sync)
-    for _, v in pairs(player:GetDescendants()) do
-        if v:IsA("NumberValue") or v:IsA("IntValue") then
-            v.Value = amount
-        end
-    end
-end
+        Rayfield:Notify({
+            Title = "FORCE STOPPED",
+            Content = "Script Disabled",
+            Duration = 4,
+            Image = 4483362458,
+        })
+    end,
+})
 
-enableBtn.MouseButton1Click:Connect(function()
-    local amt = tonumber(amountBox.Text)
-    if amt then targetAmount = math.floor(amt) end
-    enabled = true
-
-    if conn then conn:Disconnect() end
-    conn = RunService.Heartbeat:Connect(function()
-        if enabled then preciseForce(targetAmount) end
-    end)
-
-    status.Text = "💀 PRECISE ATTACK ACTIVE\nTargeting GameStat_Money + stat_Money"
-end)
-
-stopBtn.MouseButton1Click:Connect(function()
-    enabled = false
-    if conn then conn:Disconnect() end
-    status.Text = "Stopped"
-end)
+-- INFO LABEL
+MainTab:CreateParagraph({
+    Title = "Status",
+    Content = "Running maximum client force...\nIf it still drops → Server is strong"
+})

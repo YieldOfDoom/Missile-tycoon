@@ -1,120 +1,110 @@
--- Missile Tycoon Targeted Permanent Money Setter (HDAdmin Aware)
--- Uses the exact remotes you spied from Simple Spy
+-- Missile Tycoon PRECISE TARGET v11 - stat_Money + GameStat_Money
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
-local Signals = ReplicatedStorage:WaitForChild("HDAdminHDClient"):WaitForChild("Signals")
-
-print("🚀 Targeted HDAdmin Money Setter Loaded")
-
--- GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player.PlayerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 460, 0, 420)
-frame.Position = UDim2.new(0.5, -230, 0.25, 0)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+frame.Size = UDim2.new(0, 520, 0, 580)
+frame.Position = UDim2.new(0.5, -260, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
 frame.Parent = screenGui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 60)
+title.Size = UDim2.new(1, 0, 0, 70)
 title.BackgroundTransparency = 1
-title.Text = "🎯 Targeted HDAdmin Setter"
-title.TextColor3 = Color3.fromRGB(255, 70, 70)
+title.Text = "💀 PRECISE MONEY TARGET v11"
+title.TextColor3 = Color3.fromRGB(255, 30, 30)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
 local amountBox = Instance.new("TextBox")
-amountBox.Size = UDim2.new(0.85, 0, 0, 55)
-amountBox.Position = UDim2.new(0.075, 0, 0.22, 0)
-amountBox.PlaceholderText = "Target Money (e.g. 21000000)"
-amountBox.Text = "21000000"
-amountBox.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+amountBox.Size = UDim2.new(0.85, 0, 0, 60)
+amountBox.Position = UDim2.new(0.075, 0, 0.17, 0)
+amountBox.Text = "25000000"
+amountBox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 amountBox.TextColor3 = Color3.new(1,1,1)
 amountBox.TextScaled = true
 amountBox.Parent = frame
-Instance.new("UICorner", amountBox).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", amountBox).CornerRadius = UDim.new(0, 12)
 
 local enableBtn = Instance.new("TextButton")
-enableBtn.Size = UDim2.new(0.85, 0, 0, 60)
-enableBtn.Position = UDim2.new(0.075, 0, 0.4, 0)
-enableBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-enableBtn.Text = "ENABLE TARGETED SET"
+enableBtn.Size = UDim2.new(0.85, 0, 0, 70)
+enableBtn.Position = UDim2.new(0.075, 0, 0.32, 0)
+enableBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+enableBtn.Text = "START PRECISE ATTACK"
 enableBtn.TextColor3 = Color3.new(1,1,1)
 enableBtn.TextScaled = true
 enableBtn.Font = Enum.Font.GothamBold
 enableBtn.Parent = frame
-Instance.new("UICorner", enableBtn).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", enableBtn).CornerRadius = UDim.new(0, 12)
 
 local stopBtn = Instance.new("TextButton")
-stopBtn.Size = UDim2.new(0.85, 0, 0, 50)
-stopBtn.Position = UDim2.new(0.075, 0, 0.58, 0)
-stopBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+stopBtn.Size = UDim2.new(0.85, 0, 0, 55)
+stopBtn.Position = UDim2.new(0.075, 0, 0.5, 0)
+stopBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 stopBtn.Text = "STOP"
 stopBtn.TextColor3 = Color3.new(1,1,1)
 stopBtn.TextScaled = true
 stopBtn.Parent = frame
-Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 12)
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, 0, 0, 90)
-status.Position = UDim2.new(0, 0, 0.72, 0)
+status.Size = UDim2.new(1, 0, 0, 170)
+status.Position = UDim2.new(0, 0, 0.62, 0)
 status.BackgroundTransparency = 1
-status.Text = "Using spied remotes: BulkPurchaseFinished + UpdateSavedVersion etc."
-status.TextColor3 = Color3.fromRGB(180, 180, 180)
+status.Text = "Forcing: GameStat_Money + stat_Money + leaderstats"
+status.TextColor3 = Color3.fromRGB(255, 100, 100)
 status.TextScaled = true
 status.TextWrapped = true
 status.Parent = frame
 
-local targetAmount = 0
+local targetAmount = 25000000
 local enabled = false
 local conn = nil
 
-local function getMoneyStat()
+local function preciseForce(amount)
+    -- Leaderstats (leaderboard)
     local ls = player:FindFirstChild("leaderstats")
-    return ls and (ls:FindFirstChild("Money") or ls:FindFirstChild("Cash"))
+    if ls then
+        local m = ls:FindFirstChild("Money")
+        if m then m.Value = amount end
+    end
+
+    -- Precise targets from your Dex
+    for _, v in pairs(player:GetDescendants()) do
+        if v.Name == "GameStat_Money" or v.Name == "stat_Money" then
+            if v:IsA("NumberValue") or v:IsA("IntValue") then
+                v.Value = amount
+            end
+        end
+    end
+
+    -- Backup: Force ALL number values (for GUI sync)
+    for _, v in pairs(player:GetDescendants()) do
+        if v:IsA("NumberValue") or v:IsA("IntValue") then
+            v.Value = amount
+        end
+    end
 end
 
 enableBtn.MouseButton1Click:Connect(function()
     local amt = tonumber(amountBox.Text)
-    if not amt or amt < 0 then return end
-    
-    targetAmount = math.floor(amt)
+    if amt then targetAmount = math.floor(amt) end
     enabled = true
-    
-    -- Client force (backup)
+
     if conn then conn:Disconnect() end
     conn = RunService.Heartbeat:Connect(function()
-        if not enabled then return end
-        local stat = getMoneyStat()
-        if stat and stat.Value ~= targetAmount then
-            stat.Value = targetAmount
-        end
+        if enabled then preciseForce(targetAmount) end
     end)
-    
-    -- Targeted Remote Spam (slowed down)
-    spawn(function()
-        while enabled do
-            local args = {targetAmount}
-            
-            pcall(function() Signals.BulkPurchaseFinished:FireServer(unpack(args)) end)
-            pcall(function() Signals.UpdateSavedVersion:FireServer(unpack(args)) end)
-            pcall(function() Signals.UpdateBanland:FireServer(unpack(args)) end)
-            pcall(function() Signals.UpdateIceBlock:FireServer(unpack(args)) end)
-            pcall(function() Signals.PurchaseAccessory:FireServer(unpack(args)) end)
-            
-            wait(1.35) -- Slow rate to avoid "sending too fast"
-        end
-    end)
-    
-    status.Text = "✅ TARGETED MODE ACTIVE\nSending to HDAdmin remotes every 1.35s\nTarget: " .. targetAmount
+
+    status.Text = "💀 PRECISE ATTACK ACTIVE\nTargeting GameStat_Money + stat_Money"
 end)
 
 stopBtn.MouseButton1Click:Connect(function()
@@ -122,5 +112,3 @@ stopBtn.MouseButton1Click:Connect(function()
     if conn then conn:Disconnect() end
     status.Text = "Stopped"
 end)
-
-print("Targeted script using your spied remotes is ready")

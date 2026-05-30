@@ -11,7 +11,7 @@ local ActionEvent = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitFor
 -- ==========================================
 -- 🛑 VOZEX STATUS CHECK (KILL SWITCH)
 -- ==========================================
-local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
+local httpRequest = (syn and syn.request) or (http and http_request) or request
 if httpRequest then
     local success, res = pcall(function()
         return httpRequest({
@@ -82,7 +82,6 @@ local function DeepScan()
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
     local enemyChar = _G.SelectedPlayer and _G.SelectedPlayer.Character and _G.SelectedPlayer.Character:FindFirstChild("HumanoidRootPart")
     
-    -- 🎒 BACKPACK SCAN: Detects missiles pulled into player tools inventory
     local function ScanContainer(container)
         if not container then return end
         for _, item in ipairs(container:GetChildren()) do
@@ -98,7 +97,6 @@ local function DeepScan()
     ScanContainer(LocalPlayer:FindFirstChild("Backpack"))
     ScanContainer(LocalPlayer.Character)
     
-    -- Falling back to physical workspace instances if standing outside
     for _, v in ipairs(Workspace:GetDescendants()) do
         local isRocket = v.Name:match("^%d+_%d+_%d+") or v:GetAttribute("ObjectId")
         if isRocket and not v.Name:lower():match("part") and not v:IsDescendantOf(LocalPlayer.Character) and not v:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then
@@ -108,7 +106,6 @@ local function DeepScan()
             end
         end
         
-        -- Target validation scan for enemy targets
         local uuid = v:GetAttribute("InventoryId") or v:GetAttribute("ObjectId")
         if uuid and enemyChar then
             local bPos = (v:IsA("BasePart") and v.Position) or (v:IsA("Model") and v:GetModelCFrame().p)
@@ -152,7 +149,6 @@ local function TriggerAttack(isBulk)
                     
                     _G.FiredRocketsTracker[mId] = true 
                     
-                    -- Automatically auto-equip inventory tools to pass active verification
                     if itemData.IsTool and itemData.InstanceRef.Parent == LocalPlayer:FindFirstChild("Backpack") and humanoid then
                         humanoid:EquipTool(itemData.InstanceRef)
                         task.wait(0.02)
@@ -226,7 +222,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- 🏗️ NEW TAB: BUY BUILDING (UPDATED)
+-- 🏗️ NEW TAB: BUY BUILDING
 -- ==========================================
 local BuyTab = Window:CreateTab("🟢 Buy Building")
 local function runBuy(id, shop, def, req)
@@ -344,7 +340,7 @@ for _, m in pairs(MilitaryItems) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: CREATE MISSILE (FIXED LOOPS)
+-- 🚀 NEW TAB: CREATE MISSILE (0.2s SPEED UPDATE)
 -- ==========================================
 local MissileTab = Window:CreateTab("🟢 Create Missile")
 local FactoryEvent = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryCreateRocket")
@@ -378,7 +374,7 @@ MissileTab:CreateToggle({
                 while _G.AutoRandomMissile do
                     local randomMissile = Missiles[math.random(1, #Missiles)].ID
                     runCreateRocket(randomMissile)
-                    task.wait(2)
+                    task.wait(0.2)
                 end
             end)
         end
@@ -397,7 +393,7 @@ for _, m in pairs(Missiles) do
                 task.spawn(function()
                     while _G[toggleKey] do
                         runCreateRocket(m.ID)
-                        task.wait(2)
+                        task.wait(0.2)
                     end
                 end)
             end
@@ -406,23 +402,43 @@ for _, m in pairs(Missiles) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: TAKE ROCKET
+-- 🚀 NEW TAB: TAKE ROCKET (INVENTORY LIMIT PROTECTION)
 -- ==========================================
 local TakeTab = Window:CreateTab("🟢 Take Rocket")
 local StorageAction = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryStorageAction")
 
-local function runTakeRocket(rocketKey)
-    task.spawn(function()
-        pcall(function()
-            local storageId = "1_1779689034687_385656"
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v:GetAttribute("Owner") == LocalPlayer.Name and v.Name:lower():match("storage") then
-                    local realId = v:GetAttribute("InventoryId") or v:GetAttribute("ObjectId")
-                    if realId then storageId = realId break end
-                end
-            end
-            StorageAction:InvokeServer("Take", rocketKey, 1, storageId)
-        end)
+-- Scans inventory items to count space and verify current storage ID dynamically
+local function getInventorySpacesAndStorage()
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    local character = LocalPlayer.Character
+    local equippedCount = 0
+    
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then equippedCount = equippedCount + 1 end
+        end
+    end
+    if character then
+        for _, item in ipairs(character:GetChildren()) do
+            if item:IsA("Tool") then equippedCount = equippedCount + 1 end
+        end
+    end
+    
+    local storageId = "1_1779689034687_385656"
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:GetAttribute("Owner") == LocalPlayer.Name and v.Name:lower():match("storage") then
+            local realId = v:GetAttribute("InventoryId") or v:GetAttribute("ObjectId")
+            if realId then storageId = realId break end
+        end
+    end
+    
+    local freeSlots = math.max(0, 12 - equippedCount)
+    return freeSlots, storageId
+end
+
+local function runTakeRocket(rocketKey, count, targetStorage)
+    pcall(function()
+        StorageAction:InvokeServer("Take", rocketKey, count, targetStorage)
     end)
 end
 
@@ -447,10 +463,13 @@ TakeTab:CreateToggle({
         if _G.AutoTakeAll then
             task.spawn(function()
                 while _G.AutoTakeAll do
-                    for _, m in pairs(TakeMissiles) do
-                        runTakeRocket(m.ID)
+                    local slots, storageId = getInventorySpacesAndStorage()
+                    if slots > 0 then
+                        -- Pull random active targets until inventory fills
+                        local m = TakeMissiles[math.random(1, #TakeMissiles)]
+                        runTakeRocket(m.ID, 1, storageId)
                     end
-                    task.wait(2)
+                    task.wait(0.2)
                 end
             end)
         end
@@ -463,12 +482,17 @@ for _, m in pairs(TakeMissiles) do
         Name = "Take " .. m.Name,
         CurrentValue = false,
         Callback = function(Value)
-            _G["Take_" .. m.ID] = Value
-            if _G["Take_" .. m.ID] then
+            local toggleKey = "Take_" .. m.ID
+            _G[toggleKey] = Value
+            if _G[toggleKey] then
                 task.spawn(function()
-                    while _G["Take_" .. m.ID] do
-                        runTakeRocket(m.ID)
-                        task.wait(2)
+                    while _G[toggleKey] do
+                        local slots, storageId = getInventorySpacesAndStorage()
+                        if slots > 0 then
+                            -- Instantly take enough items up to the maximum tool limit 12
+                            runTakeRocket(m.ID, slots, storageId)
+                        end
+                        task.wait(1.5)
                     end
                 end)
             end
@@ -493,7 +517,7 @@ local function ServerHop()
     Rayfield:Notify({Title = "Teleporting", Content = "Finding a new server...", Duration = 3})
     local PlaceId = game.PlaceId
     local servers = {}
-    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    local req = (syn and syn.request) or (http and http_request) or request
     if req then
         local success, res = pcall(function()
             return req({Url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100", PlaceId), Method = "GET"})

@@ -260,7 +260,6 @@ BuyTab:CreateToggle({
         end)
     end
 })
-
 local Buildings = {
     {Name = "Bluebird House", ID = "f4079d72-3cf3-431a-9d7a-0f08c0a4ac2f", Shop = 4, Def = "tier1_bluebird_house", Req = "4ba44f86-7657-484e-a806-0d096a7d833f"},
     {Name = "Sunset Villa", ID = "0947b6e8-8f62-4193-b8d1-74756af231ab", Shop = 5, Def = "tier1_sunset_villa", Req = "3285b2b4-b532-46e5-a0c9-7d8d3c98f766"},
@@ -345,7 +344,7 @@ for _, m in pairs(MilitaryItems) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: CREATE MISSILE
+-- 🚀 NEW TAB: CREATE MISSILE (FIXED LOOPS)
 -- ==========================================
 local MissileTab = Window:CreateTab("🟢 Create Missile")
 local FactoryEvent = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryCreateRocket")
@@ -392,10 +391,11 @@ for _, m in pairs(Missiles) do
         Name = "Create " .. m.Name,
         CurrentValue = false,
         Callback = function(Value)
-            _G["Create_" .. m.ID] = Value
-            if _G["Create_" .. m.ID] then
+            local toggleKey = "Create_" .. m.ID
+            _G[toggleKey] = Value
+            if _G[toggleKey] then
                 task.spawn(function()
-                    while _G["Create_" .. m.ID] do
+                    while _G[toggleKey] do
                         runCreateRocket(m.ID)
                         task.wait(2)
                     end
@@ -415,7 +415,6 @@ local function runTakeRocket(rocketKey)
     task.spawn(function()
         pcall(function()
             local storageId = "1_1779689034687_385656"
-            -- Contextually trace ownership flags to acquire dynamic storage containers
             for _, v in ipairs(Workspace:GetDescendants()) do
                 if v:GetAttribute("Owner") == LocalPlayer.Name and v.Name:lower():match("storage") then
                     local realId = v:GetAttribute("InventoryId") or v:GetAttribute("ObjectId")
@@ -429,7 +428,7 @@ end
 
 local TakeMissiles = {
     {Name = "Firefly Rocket", ID = "Rocket1"},
-    {Name = "    Viper Cruise Rocket", ID = "Rocket2"},
+    {Name = "Viper Cruise Rocket", ID = "Rocket2"},
     {Name = "Hammer Ballistic", ID = "Rocket3"},
     {Name = "Titan Strike", ID = "Rocket4"},
     {Name = "Crimson Strike", ID = "Rocket5"},

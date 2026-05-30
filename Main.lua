@@ -80,7 +80,11 @@ local function DeepScan()
     table.clear(FoundBuildings)
     
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-    local enemyChar = _G.SelectedPlayer and _G.SelectedPlayer.Character and _G.SelectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    -- Safety Check: Do not scan if no target player is assigned or selected yet
+    if not _G.SelectedPlayer then return end
+    
+    local enemyChar = _G.SelectedPlayer.Character and _G.SelectedPlayer.Character:FindFirstChild("HumanoidRootPart")
     
     local function ScanContainer(container)
         if not container then return end
@@ -101,7 +105,8 @@ local function DeepScan()
         local isRocket = v.Name:match("^%d+_%d+_%d+") or v:GetAttribute("ObjectId")
         if isRocket and not v.Name:lower():match("part") and not v:IsDescendantOf(LocalPlayer.Character) and not v:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then
             local rPos = (v:IsA("BasePart") and v.Position) or (v:IsA("Model") and v:GetModelCFrame().p)
-            if rPos and (rPos - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 300 then
+            -- 🎯 TIGHT DISTANCE UPDATE: Must stand within 30 studs of physical missiles to fire them
+            if rPos and (rPos - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 30 then
                 table.insert(FoundRockets, {ID = isRocket, InstanceRef = v, IsTool = false}) 
             end
         end
@@ -111,12 +116,17 @@ local function DeepScan()
             local bPos = (v:IsA("BasePart") and v.Position) or (v:IsA("Model") and v:GetModelCFrame().p)
             if bPos then
                 local isSafe = false
+                local owner = v:GetAttribute("Owner")
+                
+                -- HARD PROTECTION: If you own it, or it's near your spawn zone, skip it entirely
+                if owner == LocalPlayer.Name or (v:IsDescendantOf(LocalPlayer.Character)) then
+                    isSafe = true
+                end
                 if _G.MySafeZone and (bPos - _G.MySafeZone).Magnitude <= 600 then 
-                    if v:IsDescendantOf(LocalPlayer.Character) or v:GetAttribute("Owner") == LocalPlayer.Name then
-                        isSafe = true 
-                    end
+                    isSafe = true
                 end
 
+                -- Target validation: Must be within range of the active selected enemy and not safe
                 if not isSafe and (bPos - enemyChar.Position).Magnitude <= 600 and not v.Name:lower():match("rocket") then 
                     table.insert(FoundBuildings, {ID = uuid, Pos = bPos, Instance = v}) 
                 end
@@ -126,7 +136,12 @@ local function DeepScan()
 end
 
 local function TriggerAttack(isBulk)
-    if not _G.MySafeZone then return Rayfield:Notify({Title="Wait!", Content="Base Auto-Securing...", Duration=2}) end
+    if not _G.SelectedPlayer then 
+        return Rayfield:Notify({Title="Error", Content="Please select a target player first!", Duration=3}) 
+    end
+    if not _G.MySafeZone then 
+        return Rayfield:Notify({Title="Wait!", Content="Base Auto-Securing...", Duration=2}) 
+    end
     if _G.WarInProgress then return end
     
     _G.WarInProgress = true
@@ -138,7 +153,7 @@ local function TriggerAttack(isBulk)
             DeepScan() 
             local total = #FoundRockets
             
-            if total > 0 and #FoundBuildings > 0 and _G.SelectedPlayer then
+            if total > 0 and #FoundBuildings > 0 and _G.SelectedPlayer do
                 local limit = isBulk and total or math.min(total, 5)
 
                 for i = 1, limit do
@@ -340,14 +355,13 @@ for _, m in pairs(MilitaryItems) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: CREATE MISSILE (MAP BYPASS UPDATE)
+-- 🚀 NEW TAB: CREATE MISSILE
 -- ==========================================
 local MissileTab = Window:CreateTab("🟢 Create Missile")
 local FactoryEvent = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryCreateRocket")
 
 local function runCreateRocket(rocketId)
     pcall(function()
-        -- Direct invocation bypasses distance filters entirely
         FactoryEvent:FireServer(rocketId, 1)
     end)
 end
@@ -403,7 +417,7 @@ for _, m in pairs(Missiles) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: TAKE ROCKET (DISTANCE-FREE STABLE BYPASS)
+-- 🚀 NEW TAB: TAKE ROCKET
 -- ==========================================
 local TakeTab = Window:CreateTab("🟢 Take Rocket")
 local StorageAction = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryStorageAction")
@@ -424,7 +438,6 @@ local function getInventorySpacesAndStorage()
         end
     end
     
-    -- Infinite Map Range Backup Generation
     local storageId = "1_" .. tostring(LocalPlayer.UserId) .. "_storage"
     for _, v in ipairs(Workspace:GetDescendants()) do
         if v.Name:lower():match("storage") then

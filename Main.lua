@@ -340,13 +340,14 @@ for _, m in pairs(MilitaryItems) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: CREATE MISSILE (0.2s SPEED UPDATE)
+-- 🚀 NEW TAB: CREATE MISSILE (MAP BYPASS UPDATE)
 -- ==========================================
 local MissileTab = Window:CreateTab("🟢 Create Missile")
 local FactoryEvent = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryCreateRocket")
 
 local function runCreateRocket(rocketId)
     pcall(function()
+        -- Direct invocation bypasses distance filters entirely
         FactoryEvent:FireServer(rocketId, 1)
     end)
 end
@@ -402,12 +403,11 @@ for _, m in pairs(Missiles) do
 end
 
 -- ==========================================
--- 🚀 NEW TAB: TAKE ROCKET (INVENTORY LIMIT PROTECTION)
+-- 🚀 NEW TAB: TAKE ROCKET (DISTANCE-FREE STABLE BYPASS)
 -- ==========================================
 local TakeTab = Window:CreateTab("🟢 Take Rocket")
 local StorageAction = ReplicatedStorage:WaitForChild("CityBuilderRockets"):WaitForChild("Remotes"):WaitForChild("FactoryStorageAction")
 
--- Scans inventory items to count space and verify current storage ID dynamically
 local function getInventorySpacesAndStorage()
     local backpack = LocalPlayer:FindFirstChild("Backpack")
     local character = LocalPlayer.Character
@@ -424,11 +424,15 @@ local function getInventorySpacesAndStorage()
         end
     end
     
-    local storageId = "1_1779689034687_385656"
+    -- Infinite Map Range Backup Generation
+    local storageId = "1_" .. tostring(LocalPlayer.UserId) .. "_storage"
     for _, v in ipairs(Workspace:GetDescendants()) do
-        if v:GetAttribute("Owner") == LocalPlayer.Name and v.Name:lower():match("storage") then
-            local realId = v:GetAttribute("InventoryId") or v:GetAttribute("ObjectId")
-            if realId then storageId = realId break end
+        if v.Name:lower():match("storage") then
+            local ownerAttr = v:GetAttribute("Owner")
+            if ownerAttr == LocalPlayer.Name or ownerAttr == nil then
+                local realId = v:GetAttribute("InventoryId") or v:GetAttribute("ObjectId")
+                if realId then storageId = realId break end
+            end
         end
     end
     
@@ -465,7 +469,6 @@ TakeTab:CreateToggle({
                 while _G.AutoTakeAll do
                     local slots, storageId = getInventorySpacesAndStorage()
                     if slots > 0 then
-                        -- Pull random active targets until inventory fills
                         local m = TakeMissiles[math.random(1, #TakeMissiles)]
                         runTakeRocket(m.ID, 1, storageId)
                     end
@@ -489,7 +492,6 @@ for _, m in pairs(TakeMissiles) do
                     while _G[toggleKey] do
                         local slots, storageId = getInventorySpacesAndStorage()
                         if slots > 0 then
-                            -- Instantly take enough items up to the maximum tool limit 12
                             runTakeRocket(m.ID, slots, storageId)
                         end
                         task.wait(1.5)

@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 LocalPlayer:WaitForChild("RocketClient", 15)
@@ -20,7 +21,7 @@ end
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "Missile Tycoon Daddy 🚀 | Sid",
-    LoadingTitle = "New Update Fully Improved🔥🔥💥💥",
+    LoadingTitle = "New Update 🔥🎉",
     LoadingSubtitle = "Inventory Scan Engaged",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false 
@@ -90,7 +91,7 @@ local function DeepScan()
                 local isSafe = false
                 if v:GetAttribute("Owner") == LocalPlayer.Name or v:IsDescendantOf(LocalPlayer.Character) then isSafe = true end
                 if _G.MySafeZone and (bPos - _G.MySafeZone).Magnitude <= 600 then isSafe = true end
-                if not isSafe and (bPos - enemyChar.Position).Magnitude <= 600 and not v.Name:lower():match("rocket") then 
+                if not isSafe && (bPos - enemyChar.Position).Magnitude <= 600 && not v.Name:lower():match("rocket") then 
                     table.insert(FoundBuildings, {ID = uuid, Pos = bPos, Instance = v}) 
                 end
             end
@@ -414,7 +415,7 @@ for _, m in pairs(TakeMissiles) do
 end
 
 -- =============================================================================
--- [TAB 6: 🔥Auto Place Missiles (Y AXIS COMPLETELY REMOVED)]
+-- [TAB 6: 🔥Auto Place Missiles (DYNAMIC RED BOUNDARY PREVIEW)]
 -- =============================================================================
 local PlaceTab = Window:CreateTab("🔥Auto Place Missiles")
 PlaceTab:CreateSection("2D Boundary Setup (X / Z Grid Alignment)")
@@ -430,6 +431,62 @@ PlaceTab:CreateInput({ Name = "Corner 2: Z Boundary", PlaceholderText = "0", Cal
 PlaceTab:CreateSlider({ Name = "Row Spacing (Distance X)", Range = {4, 25}, Increment = 1, Suffix = " studs", CurrentValue = 8, Callback = function(V) RowSpacing = V end })
 PlaceTab:CreateSlider({ Name = "Col Spacing (Distance Z)", Range = {4, 25}, Increment = 1, Suffix = " studs", CurrentValue = 8, Callback = function(V) ColSpacing = V end })
 
+-- Dynamic Selection Preview Setup
+local PreviewPart = nil
+local PreviewBox = nil
+local PreviewConnection = nil
+
+PlaceTab:CreateToggle({
+    Name = "👀 Show Selection Box",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            if PreviewConnection then PreviewConnection:Disconnect() end
+            if PreviewPart then PreviewPart:Destroy() end
+
+            -- Create an invisible structural template part
+            PreviewPart = Instance.new("Part")
+            PreviewPart.Transparency = 1
+            PreviewPart.Anchored = true
+            PreviewPart.CanCollide = false
+            PreviewPart.Parent = Workspace
+
+            -- Wrap it in a bold red highlight SelectionBox overlay
+            PreviewBox = Instance.new("SelectionBox")
+            PreviewBox.Color3 = Color3.fromRGB(255, 0, 0)
+            PreviewBox.LineThickness = 0.15
+            PreviewBox.Adornee = PreviewPart
+            PreviewBox.Parent = PreviewPart
+
+            -- Render loop to project the zone directly ahead of your viewpoint
+            PreviewConnection = RunService.RenderStepped:Connect(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root and PreviewPart then
+                    -- Extract values to size the bounding grid square dynamically
+                    local sizeX = math.max(4, math.abs(X2 - X1))
+                    local sizeZ = math.max(4, math.abs(Z2 - Z1))
+                    if sizeX == 4 and sizeZ == 4 then
+                        sizeX = RowSpacing * 2
+                        sizeZ = ColSpacing * 2
+                    end
+                    
+                    PreviewPart.Size = Vector3.new(sizeX, 1, sizeZ)
+                    
+                    -- Keeps it perfectly floating right under your horizon ahead
+                    local groundLevel = root.Position.Y - 3
+                    local targetCFrame = root.CFrame * CFrame.new(0, 0, -15)
+                    PreviewPart.CFrame = CFrame.new(targetCFrame.Position.X, groundLevel, targetCFrame.Position.Z) * CFrame.Angles(0, math.rad(root.Orientation.Y), 0)
+                end
+            end)
+        else
+            -- Strip out all trackers from memory immediately
+            if PreviewConnection then PreviewConnection:Disconnect() PreviewConnection = nil end
+            if PreviewPart then PreviewPart:Destroy() PreviewPart = nil end
+        end
+    end
+})
+
 PlaceTab:CreateButton({
     Name = "🛠️ START MATRICIAL PLACEMENT",
     Callback = function()
@@ -437,9 +494,7 @@ PlaceTab:CreateButton({
         local root = character and character:FindFirstChild("HumanoidRootPart")
         if not root then return Rayfield:Notify({Title="Error", Content="Spawn character first!", Duration=3}) end
         
-        -- Automatically sample ground alignment height directly under your avatar's feet
         local GroundSurfaceY = root.Position.Y - 3 
-        
         local minX, maxX = math.min(X1, X2), math.max(X1, X2)
         local minZ, maxZ = math.min(Z1, Z2), math.max(Z1, Z2)
         
@@ -479,7 +534,7 @@ PlaceTab:CreateButton({
                         pcall(function()
                             ActionEvent:FireServer("d7b076ed-3f78-4648-b4fd-37d2a1b7d450", "PlaceOwnedItem", {
                                 ["TargetX"] = currentX,
-                                ["TargetY"] = GroundSurfaceY, -- Automated Flat Floor Target
+                                ["TargetY"] = GroundSurfaceY,
                                 ["TargetZ"] = currentZ,
                                 ["ObjectId"] = objId
                             })
@@ -502,9 +557,9 @@ PlaceTab:CreateButton({
 })
 
 -- =============================================================================
--- [TAB 7: ⚡ Teleport]
+-- [TAB 7: Teleporter ⚡]
 -- =============================================================================
-local TeleportTab = Window:CreateTab("⚡ Teleport")
+local TeleportTab = Window:CreateTab("Teleporter ⚡")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 
